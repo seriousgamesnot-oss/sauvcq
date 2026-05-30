@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class MockStateValidator(Node):
+    def __init__(self):
+        super().__init__('state_validator')
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('expected_phase_sequence', ['INIT', 'FORWARD_TRAVERSAL', 'UTURN', 'REVERSE_TRAVERSAL', 'COMPLETE']),
+                ('timeout_sec', 120.0),
+                ('mission_phase_topic', '/varuna/mission_phase')
+            ]
+        )
+        self.get_logger().info("Mock State Validator initialized.")
+        # TODO: Subscribe to mission_phase_topic and assert sequence
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = MockStateValidator()
+    rclpy.spin(node)
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

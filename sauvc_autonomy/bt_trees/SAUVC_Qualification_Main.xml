@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="SAUVC_Qualification_Main">
+
+  <BehaviorTree ID="SAUVC_Qualification_Main">
+    <Parallel success_count="1" failure_count="1" name="RootParallel">
+
+      <SubTree ID="Depth_Keep_Subtree" name="DepthKeepWatchdog"
+               target_depth="{operational_depth}"
+               depth_tolerance="0.15"
+               max_depth="{max_safe_depth}"
+               min_depth="{min_safe_depth}" />
+
+      <Sequence name="MissionSequence">
+
+        <Sequence name="PreFlight">
+          <IsDepthStable    depth_topic="/varuna/depth"
+                            stable_threshold="0.05"
+                            window_sec="1.0" />
+          <Script code="mission_phase:='FORWARD_RUN'" />
+          <Script code="gate_pass_count:=0" />
+        </Sequence>
+
+        <Sequence name="InitialDive">
+          <IsDepthStable    depth_topic="/varuna/depth"
+                            stable_threshold="0.08"
+                            window_sec="1.5" />
+        </Sequence>
+
+        <Sequence name="ForwardRun">
+          <Script code="mission_phase:='FORWARD_TRAVERSAL'" />
+          <SubTree ID="Gate_Traversal_Subtree" name="ForwardTraversal"
+                   direction="FORWARD"
+                   gate_pose="{gate_pose}"
+                   vehicle_length="{vehicle_length_m}"
+                   approach_standoff="1.5"
+                   lateral_kp="0.6"
+                   yaw_kp="0.4" />
+          <Script code="gate_pass_count:=gate_pass_count+1" />
+        </Sequence>
+
+        <Sequence name="UTurnPhase">
+          <Script code="mission_phase:='UTURN'" />
+          <SubTree ID="UTurn_Subtree" name="UTurn180"
+                   target_yaw_delta="180.0"
+                   yaw_rate_deg_s="20.0"
+                   depth_hold="{operational_depth}"
+                   completion_tolerance_deg="3.0" />
+        </Sequence>
+
+        <Sequence name="ReverseRun">
+          <Script code="mission_phase:='REVERSE_TRAVERSAL'" />
+          <SubTree ID="Gate_Traversal_Subtree" name="ReverseTraversal"
+                   direction="REVERSE"
+                   gate_pose="{gate_pose}"
+                   vehicle_length="{vehicle_length_m}"
+                   approach_standoff="1.5"
+                   lateral_kp="0.6"
+                   yaw_kp="0.4" />
+          <Script code="gate_pass_count:=gate_pass_count+1" />
+        </Sequence>
+
+        <Sequence name="MissionComplete">
+          <Script code="mission_phase:='COMPLETE'" />
+          <Sleep msec="3000" />
+        </Sequence>
+
+      </Sequence> </Parallel>   </BehaviorTree>
+
+
+  <BehaviorTree ID="Depth_Keep_Subtree">
+    <ReactiveFallback name="DepthKeepRoot">
+
+      <ReactiveSequence name="SafetyCheck">
+        <IsDepthStable  depth_topic="/varuna/depth"
+                        stable_threshold="{depth_tolerance}"
+                        window_sec="0.5" />
+        <IsWithinDepthBounds depth_topic="/varuna/depth"
+                             min_depth="{min_safe_depth}"
+                             max_depth="{max_safe_depth}" />
+        <AlwaysRunning />
+      </ReactiveSequence>
+
+      <ReactiveSequence name="DepthCorrection">
+        <Inverter>
+          <IsWithinDepthBounds depth_topic="/varuna/depth"
+                               min_depth="{min_safe_depth}"
+                               max_depth="{max_safe_depth}" />
+        </Inverter>
+        <MaintainDepth target_depth="{target_depth}"
+                       tolerance="{depth_tolerance}" />
+      </ReactiveSequence>
+
+      <EmergencySurface reason="DepthKeepFailed" />
+
+    </ReactiveFallback>
+  </BehaviorTree>
+
+
+  <BehaviorTree ID="Gate_Traversal_Subtree">
+    <ReactiveSequence name="GateTraversalRoot">
+
+      <ReactiveFallback name="SearchForGate">
+        <IsGateVisible  camera_topic="/varuna/camera/front/compressed"
+                        min_confidence="0.65"
+                        output_gate_pose="{gate_pose}" />
+        <Sequence name="SearchPattern">
+          <YawSweepSearch sweep_angle_deg="60.0"
+                          sweep_rate_deg_s="8.0"
+                          camera_topic="/varuna/camera/front/compressed" />
+        </Sequence>
+      </ReactiveFallback>
+
+      <GetGatePose  camera_topic="/varuna/camera/front/compressed"
+                    imu_topic="/varuna/imu"
+                    output_gate_pose="{gate_pose}" />
+
+      <ReactiveFallback name="CoarseAlign">
+        <IsAlignedWithGate  gate_pose="{gate_pose}"
+                            lateral_tolerance_m="0.30"
+                            yaw_tolerance_deg="8.0" />
+        <MoveToRelativePose gate_pose="{gate_pose}"
+                            approach_standoff="{approach_standoff}"
+                            lateral_kp="{lateral_kp}"
+                            yaw_kp="{yaw_kp}"
+                            mode="COARSE" />
+      </ReactiveFallback>
+
+      <ReactiveFallback name="FineAlign">
+        <IsAlignedWithGate  gate_pose="{gate_pose}"
+                            lateral_tolerance_m="0.10"
+                            yaw_tolerance_deg="3.0" />
+        <MoveToRelativePose gate_pose="{gate_pose}"
+                            approach_standoff="{approach_standoff}"
+                            lateral_kp="{lateral_kp}"
+                            yaw_kp="{yaw_kp}"
+                            mode="FINE" />
+      </ReactiveFallback>
+
+      <Sequence name="PushThrough">
+        <MoveToRelativePose gate_pose="{gate_pose}"
+                            approach_standoff="-1.0"
+                            lateral_kp="0.2"
+                            yaw_kp="0.2"
+                            mode="PUSH" />
+        <IsVehicleClearOfGate gate_pose="{gate_pose}"
+                              vehicle_length="{vehicle_length}"
+                              clearance_margin="0.20" />
+      </Sequence>
+
+    </ReactiveSequence>
+  </BehaviorTree>
+
+
+  <BehaviorTree ID="UTurn_Subtree">
+    <Parallel success_count="1" failure_count="1" name="UTurnParallel">
+
+      <MaintainDepth  target_depth="{depth_hold}"
+                      tolerance="0.10" />
+
+      <Sequence name="YawRotation">
+        <CalculateUTurnTrajectory imu_topic="/varuna/imu"
+                                  target_yaw_delta="{target_yaw_delta}"
+                                  output_target_yaw="{uturn_target_yaw}" />
+        <ExecuteYawRotation target_yaw="{uturn_target_yaw}"
+                            yaw_rate_deg_s="{yaw_rate_deg_s}"
+                            imu_topic="/varuna/imu" />
+        <IsYawComplete  current_yaw_topic="/varuna/imu"
+                        target_yaw="{uturn_target_yaw}"
+                        tolerance_deg="{completion_tolerance_deg}" />
+        <Sleep msec="500" />
+      </Sequence>
+
+    </Parallel>
+  </BehaviorTree>
+
+</root>

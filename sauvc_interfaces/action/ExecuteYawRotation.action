@@ -1,0 +1,9 @@
+# Goal
+float64 target_yaw
+float64 yaw_rate_deg_s
+---
+# Result
+bool success
+---
+# Feedback
+float64 error_deg

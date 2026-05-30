@@ -1,0 +1,9 @@
+# Goal
+geometry_msgs/PoseStamped target_pose
+string mode
+---
+# Result
+bool success
+---
+# Feedback
+float64 distance_remaining
