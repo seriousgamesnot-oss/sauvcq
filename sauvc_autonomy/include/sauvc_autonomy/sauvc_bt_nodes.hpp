@@ -509,15 +509,19 @@ private:
   BT::NodeStatus check() {
     const auto& p = s_->p;
     if (!s_->odomFresh()) return BT::NodeStatus::RUNNING;
-    double clearance = p.pool_depth_m - s_->bestDepth();          // depth-only cross-check
+    const double depth = s_->bestDepth();
+    double floor_depth = p.pool_depth_m;
     bool cam_bad = false;
     if (p.use_floor_camera) {
       const auto f = s_->floorInfo(p.floor_data_timeout_s);
-      if (f.fresh && f.valid) clearance = std::min(clearance, f.clearance);
-      else if (f.ever) cam_bad = true;                            // stale or invalid -> treat as unsafe
+      if (f.fresh && f.valid) floor_depth = std::min(floor_depth, depth + f.clearance);
+      else if (f.ever) cam_bad = true;                     // stale or invalid -> treat as unsafe
     }
-    const double limit = p.min_floor_clearance_m + (active_ ? 0.10 : 0.0);   // hysteresis
-    const bool viol = clearance < limit || cam_bad;
+    const double clearance = floor_depth - depth;
+    // Latched: once triggered, release only when the OPERATING depth would be safe again.
+    const double at_op = floor_depth - p.operational_depth;
+    const bool viol = active_ ? (at_op < p.min_floor_clearance_m + 0.10 || cam_bad)
+                              : (clearance < p.min_floor_clearance_m || cam_bad);
     if (viol && !active_)
       RCLCPP_WARN(node_->get_logger(), "FLOOR SAFETY: clearance %.2f m (min %.2f)%s -> hold + climb to %.2f m",
                   clearance, p.min_floor_clearance_m, cam_bad ? ", bottom-camera data bad" : "",

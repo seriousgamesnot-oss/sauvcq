@@ -6,7 +6,7 @@ import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
-from sauvc_interfaces.msg import ControlSetpoint, GateDetection
+from sauvc_interfaces.msg import ControlSetpoint, GateDetection, FloorClearance
 
 
 def wrap(a):
@@ -21,12 +21,17 @@ class MockVehicleSim(Node):
         self.declare_parameter('max_speed', 0.4)
         self.declare_parameter('max_yaw_rate_deg', 40.0)
         self.declare_parameter('max_depth_rate', 0.25)
+        self.declare_parameter('pool_depth', 3.0)
+        self.declare_parameter('floor_bump_x0', -1.0)
+        self.declare_parameter('floor_bump_x1', -1.0)
+        self.declare_parameter('floor_bump_raise', 0.0)
         self.x = self.y = self.yaw = self.depth = 0.0
         self.sp = None
         self.dt = 1.0 / 30.0
         self.odom_pub = self.create_publisher(Odometry, '/odometry/filtered', 10)
         self.imu_pub = self.create_publisher(Imu, '/imu/data', 10)
         self.gate_pub = self.create_publisher(GateDetection, '/varuna/gate_detection', 10)
+        self.floor_pub = self.create_publisher(FloorClearance, '/varuna/floor_clearance', 10)
         self.create_subscription(ControlSetpoint, '/varuna/control_setpoint', self.on_sp, 10)
         self.create_timer(self.dt, self.step)
 
@@ -85,6 +90,20 @@ class MockVehicleSim(Node):
             g.position.y = by
             g.orientation.w = 1.0
             self.gate_pub.publish(g)
+
+        pool = self.get_parameter('pool_depth').value
+        x0 = self.get_parameter('floor_bump_x0').value
+        x1 = self.get_parameter('floor_bump_x1').value
+        raise_m = self.get_parameter('floor_bump_raise').value
+        floor_depth = pool - (raise_m if x0 <= self.x <= x1 else 0.0)
+        f = FloorClearance()
+        f.header.stamp = now
+        f.header.frame_id = 'bottom_camera'
+        f.camera_id = 'bottom'
+        f.valid = True
+        f.clearance_m = float(floor_depth - self.depth)
+        f.confidence = 0.9
+        self.floor_pub.publish(f)
 
         self.get_logger().info(
             'x=%.2f y=%.2f yaw=%.0fdeg depth=%.2f' % (self.x, self.y, math.degrees(self.yaw), self.depth),
