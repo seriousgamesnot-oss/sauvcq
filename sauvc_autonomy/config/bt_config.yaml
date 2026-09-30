@@ -1,0 +1,31 @@
+sauvc_bt_executor:
+  ros__parameters:
+    # --- Topics (change here if a guess is wrong) ---
+    ekf_topic: /odometry/filtered          # nav_msgs/Odometry, ~30 Hz
+    imu_topic: /imu/data                   # sensor_msgs/Imu (after complementary filter)
+    bar30_topic: ""                        # REQUIRED, TBD: sensor_msgs/FluidPressure
+    gate_topic: /varuna/gate_detection     # sauvc_interfaces/GateDetection
+    floor_topic: /varuna/floor_clearance   # sauvc_interfaces/FloorClearance
+    setpoint_topic: /varuna/control_setpoint  # sauvc_interfaces/ControlSetpoint
+    battery_topic: ""                      # REQUIRED, TBD
+
+    # --- Cameras ---
+    gate_camera_id: front
+
+    # --- Frames / signs ---
+    depth_is_minus_z: true                 # assumes EKF z-up
+    yaw_ccw_positive: true
+
+    # --- Return to start ---
+    arrival_radius_m: 1.0
+
+    # --- Floor safety (all REQUIRED, no safe default) ---
+    pool_depth_m: -1.0
+    min_floor_clearance_m: -1.0
+    floor_safe_depth_m: -1.0
+    floor_data_timeout_s: 1.0
+
+    # --- Staleness ---
+    ekf_timeout_s: 0.5
+    imu_timeout_s: 0.5
+    bar30_timeout_s: 0.5
