@@ -64,6 +64,7 @@ install(PROGRAMS
   scripts/mock_navigation_node
   scripts/mock_controls_node
   scripts/mock_state_validator
+  scripts/mock_vehicle_sim
   DESTINATION lib/${PROJECT_NAME}
 )
 

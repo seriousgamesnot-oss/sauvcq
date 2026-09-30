@@ -192,6 +192,13 @@ private:
 
   void syncBlackboard() {
     auto bb = tree_.rootBlackboard();
+    std::string phase;
+    if (bb->get("mission_phase", phase) && phase != last_phase_) {
+      last_phase_ = phase;
+      const auto v = state_->pose();
+      RCLCPP_INFO(get_logger(), "PHASE %s | depth %.2f | pos (%.2f, %.2f)", phase.c_str(),
+                  state_->depth(), v.position.x, v.position.y);
+    }
     if (state_->odomEver()) {
       const auto pose = state_->pose();
       bb->set("current_pose", pose);
@@ -242,6 +249,7 @@ private:
   std::unique_ptr<BT::Groot2Publisher> groot2_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   bool mission_done_{false};
+  std::string last_phase_;
 };
 
 int main(int argc, char** argv) {
