@@ -16,6 +16,8 @@
   <depend>geometry_msgs</depend>
   <depend>std_msgs</depend>
 
+    <buildtool_depend>rosidl_default_generators</buildtool_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>

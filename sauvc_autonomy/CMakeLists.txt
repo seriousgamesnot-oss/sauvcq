@@ -70,7 +70,7 @@ install(PROGRAMS
 # Install Launch and Config files
 install(DIRECTORY
   launch
-  bt_trees
+  bt_trees config
   DESTINATION share/${PROJECT_NAME}
 )
 
