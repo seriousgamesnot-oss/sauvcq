@@ -1,0 +1,44 @@
+sauvc_bt_executor:
+  ros__parameters:
+    tick_rate_hz: 20.0
+    operational_depth: 1.0
+    min_safe_depth: 0.35
+    max_safe_depth: 2.40
+    vehicle_length_m: 0.65
+
+    # --- Topics (change here if a guess is wrong) ---
+    ekf_topic: /odometry/filtered          # nav_msgs/Odometry
+    imu_topic: /imu/data                   # sensor_msgs/Imu (post complementary filter)
+    bar30_topic: ""                        # TBD: sensor_msgs/FluidPressure; empty = use EKF depth only
+    gate_topic: /varuna/gate_detection     # sauvc_interfaces/GateDetection
+    floor_topic: ""                        # TBD: sauvc_interfaces/FloorClearance; empty = depth-only floor check
+    setpoint_topic: /varuna/control_setpoint  # sauvc_interfaces/ControlSetpoint
+    battery_topic: ""                      # TBD: sensor_msgs/BatteryState; empty = monitor off
+
+    # --- Perception / frames (ASSUMPTIONS, confirm with perception + EKF owners) ---
+    gate_camera_id: front
+    gate_position_in_body_frame: true      # detection.position is body frame (x fwd, y left), no TF yet
+    depth_is_minus_z: true                 # EKF z-up; yaw CCW positive, ENU
+
+    # --- Return to start ---
+    arrival_radius_m: 1.0
+
+    # --- Floor safety: REQUIRED, executor refuses to start while unset (-1) ---
+    pool_depth_m: -1.0
+    min_floor_clearance_m: -1.0
+    floor_safe_depth_m: -1.0
+    floor_data_timeout_s: 1.0
+
+    # --- Bar30 depth conversion ---
+    atm_pressure_pa: 101325.0
+    water_density: 997.0
+
+    # --- Staleness ---
+    ekf_timeout_s: 0.5
+    imu_timeout_s: 0.5
+    bar30_timeout_s: 0.5
+
+    # --- Battery (UNCONFIRMED values, only active when battery_topic is set) ---
+    battery_warn_pct: 25.0
+    battery_critical_pct: 15.0
+    battery_critical_action: hold          # warn | hold | abort

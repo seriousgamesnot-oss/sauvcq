@@ -64,13 +64,14 @@ install(PROGRAMS
   scripts/mock_navigation_node
   scripts/mock_controls_node
   scripts/mock_state_validator
+  scripts/mock_vehicle_sim
   DESTINATION lib/${PROJECT_NAME}
 )
 
 # Install Launch and Config files
 install(DIRECTORY
   launch
-  bt_trees
+  bt_trees config
   DESTINATION share/${PROJECT_NAME}
 )
 
