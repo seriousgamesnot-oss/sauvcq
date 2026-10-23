@@ -75,4 +75,6 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(PROGRAMS scripts/gate_bridge_pixel.py scripts/gate_panel.py DESTINATION lib/${PROJECT_NAME})
+
 ament_package()
